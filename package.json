@@ -8,7 +8,8 @@
     "dev": "node --loader ts-node/esm src/index.ts",
     "watch": "node --loader ts-node/esm --watch src/index.ts",
     "test": "vitest",
-    "test:watch": "vitest --watch"
+    "test:watch": "vitest --watch",
+    "test:debug": "vitest --inspect-brk=127.0.0.1:3000 --no-file-parallelism"
   },
   "keywords": [],
   "author": "",

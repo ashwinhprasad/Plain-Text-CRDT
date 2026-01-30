@@ -5,9 +5,9 @@ import { Identifier } from "../src/identifier.mjs";
 describe("RGA CRDT", () => {
 
   it("single replica sequential insert", () => {
-    const r1 = new RgaReplica("A");
+    const r1 = new RgaReplica(0);
 
-    r1.insert(Identifier.HEAD, "H");
+    r1.insert(r1.document().lastId(), "H");
     r1.insert(r1.document().lastId(), "e");
     r1.insert(r1.document().lastId(), "l");
     r1.insert(r1.document().lastId(), "l");
@@ -17,22 +17,22 @@ describe("RGA CRDT", () => {
   });
 
   it("forked replica has same state", () => {
-    const r1 = new RgaReplica("A");
+    const r1 = new RgaReplica(0);
 
-    r1.insert(Identifier.HEAD, "H");
+    r1.insert(r1.document().lastId(), "H");
     r1.insert(r1.document().lastId(), "i");
 
-    const r2 = r1.fork();
+    const r2 = r1.fork(1);
 
     expect(r1.document().getText()).toBe("Hi");
     expect(r2.document().getText()).toBe("Hi");
   });
 
   it("manual operation delivery", () => {
-    const r1 = new RgaReplica("A");
-    const r2 = r1.fork();
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
 
-    const op = r1.insert(Identifier.HEAD, "X");
+    const op = r1.insert(r1.document().lastId(), "X");
     r2.apply(op);
 
     expect(r1.document().getText()).toBe("X");
@@ -40,11 +40,11 @@ describe("RGA CRDT", () => {
   });
 
   it("concurrent inserts converge deterministically", () => {
-    const r1 = new RgaReplica("A");
-    const r2 = r1.fork();
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
 
-    const op1 = r1.insert(Identifier.HEAD, "A");
-    const op2 = r2.insert(Identifier.HEAD, "B");
+    const op1 = r1.insert(r1.document().lastId(), "A");
+    const op2 = r2.insert(r2.document().lastId(), "B");
 
     r1.apply(op2);
     r2.apply(op1);
@@ -53,10 +53,10 @@ describe("RGA CRDT", () => {
   });
 
   it("delete converges correctly", () => {
-    const r1 = new RgaReplica("A");
-    const r2 = r1.fork();
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
 
-    const op1 = r1.insert(Identifier.HEAD, "H");
+    const op1 = r1.insert(r1.document().lastId(), "H");
     const op2 = r1.insert(op1.id, "i");
 
     r2.apply(op1);
@@ -71,15 +71,15 @@ describe("RGA CRDT", () => {
   });
 
   it("empty replica starts with empty document", () => {
-    const r = new RgaReplica("A");
+    const r = new RgaReplica(0);
     expect(r.document().getText()).toBe("");
   });
 
 
   it("deleting the same id twice is idempotent", () => {
-    const r = new RgaReplica("A");
+    const r = new RgaReplica(0);
 
-    const op = r.insert(Identifier.HEAD, "X");
+    const op = r.insert(r.document().lastId(), "X");
     r.delete(op.id);
 
     expect(() => r.delete(op.id)).not.toThrow();
@@ -88,10 +88,10 @@ describe("RGA CRDT", () => {
 
 
   it("applying the same insert twice does not duplicate content", () => {
-    const r1 = new RgaReplica("A");
-    const r2 = r1.fork();
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
 
-    const op = r1.insert(Identifier.HEAD, "X");
+    const op = r1.insert(r1.document().lastId(), "X");
 
     r2.apply(op);
     r2.apply(op); // duplicate delivery
@@ -101,13 +101,13 @@ describe("RGA CRDT", () => {
 
 
   it("three replicas converge after mixed operations", () => {
-    const r1 = new RgaReplica("A");
-    const r2 = r1.fork();
-    const r3 = r1.fork();
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+    const r3 = r1.fork(2);
 
-    const op1 = r1.insert(Identifier.HEAD, "A");
-    const op2 = r2.insert(Identifier.HEAD, "B");
-    const op3 = r3.insert(Identifier.HEAD, "C");
+    const op1 = r1.insert(r1.document().lastId(), "A");
+    const op2 = r2.insert(r2.document().lastId(), "B");
+    const op3 = r3.insert(r3.document().lastId(), "C");
 
     // Shuffle delivery
     r1.apply(op2);
@@ -125,9 +125,9 @@ describe("RGA CRDT", () => {
 
 
   it("insert after a deleted element still works", () => {
-    const r = new RgaReplica("A");
+    const r = new RgaReplica(0);
 
-    const h = r.insert(Identifier.HEAD, "H");
+    const h = r.insert(r.document().lastId(), "H");
     const i = r.insert(h.id, "i");
 
     r.delete(h.id);
@@ -139,12 +139,12 @@ describe("RGA CRDT", () => {
 
 
   it("forked replica preserves tombstones", () => {
-    const r1 = new RgaReplica("A");
+    const r1 = new RgaReplica(0);
 
-    const op = r1.insert(Identifier.HEAD, "X");
+    const op = r1.insert(r1.document().lastId(), "X");
     r1.delete(op.id);
 
-    const r2 = r1.fork();
+    const r2 = r1.fork(1);
 
     expect(r1.document().getText()).toBe("");
     expect(r2.document().getText()).toBe("");

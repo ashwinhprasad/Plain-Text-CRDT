@@ -1,7 +1,7 @@
 ## Docker Dev Container
 
 ```bash
-docker run -it --rm \
+docker run -it \
   -v $(pwd):/app \
   -w /app \
   --network=host \

@@ -16,13 +16,15 @@ class RgaNode {
 }
 
 export class RgaDocument {
+
   private readonly nodes = new Map<string, RgaNode>();
   private readonly head: RgaNode;
 
   constructor(source?: RgaDocument) {
     if (!source) {
-      this.head = new RgaNode(Identifier.HEAD, null, "");
-      this.nodes.set(this.key(Identifier.HEAD), this.head);
+      const headId = new Identifier(0, 0);
+      this.head = new RgaNode(headId, null, "");
+      this.nodes.set(this.key(headId), this.head);
     } else {
       // deep clone
       const map = new Map<string, RgaNode>();
@@ -47,7 +49,7 @@ export class RgaDocument {
         this.nodes.set(k, v);
       }
 
-      this.head = map.get(this.key(Identifier.HEAD))!;
+      this.head = map.get(this.key(source.head.id))!;
     }
   }
 
@@ -105,13 +107,17 @@ export class RgaDocument {
     while (i < list.length) {
       const current = list[i];
       if (!current) break;
-      if (current.id.compare(node.id) >= 0) break;
+      if (current.id.compare(node.id)) break;
       i++;
     }
     list.splice(i, 0, node);
   }
 
   private key(id: Identifier): string {
-    return `${id.counter}:${id.siteId}`;
+    return `${id.counter}:${id.replicaId}`;
+  }
+
+  headId(): Identifier {
+    return this.head.id;
   }
 }

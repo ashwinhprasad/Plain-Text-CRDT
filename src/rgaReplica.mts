@@ -8,7 +8,7 @@ export class RgaReplica {
   private readonly doc: RgaDocument;
 
   constructor(
-    private readonly siteId: string,
+    private readonly replicaId: number,
     clock?: number,
     doc?: RgaDocument
   ) {
@@ -27,7 +27,7 @@ export class RgaReplica {
       throw new Error("Only single characters supported");
     }
 
-    const id = new Identifier(++this.clock, this.siteId);
+    const id = new Identifier(++this.clock, this.replicaId);
     const op = new InsertOp(id, prevId, char);
     this.doc.applyInsert(op);
     return op;
@@ -51,11 +51,11 @@ export class RgaReplica {
 
   /* ---------------- fork ---------------- */
 
-  fork(): RgaReplica {
-    return new RgaReplica(
-      this.siteId,
-      this.clock,
-      new RgaDocument(this.doc)
-    );
-  }
+  fork(newReplicaId: number): RgaReplica {
+  return new RgaReplica(
+    newReplicaId,
+    this.clock,
+    new RgaDocument(this.doc)
+  );
+}
 }
