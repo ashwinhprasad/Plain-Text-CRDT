@@ -150,4 +150,123 @@ describe("RGA CRDT", () => {
     expect(r2.document().getText()).toBe("");
   });
 
+  it("concurrent inserts at same position with delete", () => {
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+
+    const a = r1.insert(r1.document().lastId(), "A");
+    r2.apply(a);
+
+    const b1 = r1.insert(a.id, "B");
+    const c2 = r2.insert(a.id, "C");
+
+    r1.apply(c2);
+    r2.apply(b1);
+
+    // delete one of the concurrently inserted characters
+    const del = r1.delete(b1.id);
+    r2.apply(del);
+
+    expect(r1.document().getText()).toBe(r2.document().getText());
+  });
+
+  it("interleaved deletes and inserts converge", () => {
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+
+    const a = r1.insert(r1.document().lastId(), "A");
+    const b = r1.insert(a.id, "B");
+    const c = r1.insert(b.id, "C");
+
+    r2.apply(a);
+    r2.apply(b);
+    r2.apply(c);
+
+    const delB = r1.delete(b.id);
+    const x = r2.insert(a.id, "X");
+
+    r1.apply(x);
+    r2.apply(delB);
+
+    expect(r1.document().getText()).toBe(r2.document().getText());
+  });
+
+
+  it("concurrent updates to same character converge", () => {
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+
+    const a = r1.insert(r1.document().lastId(), "A");
+    r2.apply(a);
+
+    // r1 updates A -> B
+    const delA1 = r1.delete(a.id);
+    const b = r1.insert(r1.document().lastId(), "B");
+
+    // r2 updates A -> C
+    const delA2 = r2.delete(a.id);
+    const c = r2.insert(r2.document().lastId(), "C");
+
+    r1.apply(delA2);
+    r1.apply(c);
+
+    r2.apply(delA1);
+    r2.apply(b);
+
+    expect(r1.document().getText()).toBe(r2.document().getText());
+  });
+
+  it("delete parent while concurrent child insert", () => {
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+
+    const a = r1.insert(r1.document().lastId(), "A");
+    r2.apply(a);
+
+    const b = r2.insert(a.id, "B");
+    const delA = r1.delete(a.id);
+
+    r1.apply(b);
+    r2.apply(delA);
+
+    expect(r1.document().getText()).toBe(r2.document().getText());
+  });
+
+  it("multiple mixed operations converge", () => {
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+
+    const h = r1.insert(r1.document().lastId(), "H");
+    const e = r1.insert(h.id, "e");
+
+    r2.apply(h);
+    r2.apply(e);
+
+    const l1 = r2.insert(e.id, "l");
+    const delE = r1.delete(e.id);
+    const a = r1.insert(h.id, "a");
+
+    r1.apply(l1);
+    r2.apply(delE);
+    r2.apply(a);
+
+    expect(r1.document().getText()).toBe(r2.document().getText());
+  });
+
+  it("insert after deleted element converges", () => {
+    const r1 = new RgaReplica(0);
+    const r2 = r1.fork(1);
+
+    const a = r1.insert(r1.document().lastId(), "A");
+    r2.apply(a);
+
+    const delA = r1.delete(a.id);
+    const b = r2.insert(a.id, "B");
+
+    r1.apply(b);
+    r2.apply(delA);
+
+    expect(r1.document().getText()).toBe(r2.document().getText());
+  });
+
 });
